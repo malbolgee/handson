@@ -2,59 +2,60 @@
 #include <linux/usb.h>
 #include <linux/slab.h>
 
-MODULE_AUTHOR("DevTITANS <devtitans@icomp.ufam.edu.br>");
+MODULE_AUTHOR("Grupo-2 <devtitans@icomp.ufam.edu.br>");
 MODULE_DESCRIPTION("Driver de acesso ao Sniffer (ESP32 com Chip Serial CP2102");
 MODULE_LICENSE("GPL");
 
-// Tamanho máximo de uma linha de resposta do dispositvo USB
-#define MAX_RECV_LINE 100
+#define MAX_RECV_LINE 100 /** The maximum length of the USB response.  */
 
-static int  usb_probe(struct usb_interface *ifce, const struct usb_device_id *id); // Executado quando o dispositivo é conectado na USB
-static void usb_disconnect(struct usb_interface *ifce);                            // Executado quando o dispositivo USB é desconectado da USB
-static int  usb_send_cmd(char *cmd, int param);                                    // Envia um comando via USB e espera/retorna a resposta do dispositivo (int)
-// Executado quando o arquivo /sys/kernel/sniffer/{rssi} é lido (e.g., cat /sys/kernel/sniffer/rssi)
+static int usb_probe(struct usb_interface *ifce, const struct usb_device_id *id);
+static void usb_disconnect(struct usb_interface *ifce);
+static int usb_send_cmd(char *cmd);
 static ssize_t attr_show(struct kobject *sys_obj, struct kobj_attribute *attr, char *buff);
-// Executado quando o arquivo /sys/kernel/sniffer/{rssi, ldr, threshold} é escrito (e.g., echo "100" | sudo tee -a /sys/kernel/sniffer/rssi)
-/* static ssize_t attr_store(struct kobject *sys_obj, struct kobj_attribute *attr, const char *buff, size_t count); */
 
-static char recv_line[MAX_RECV_LINE];              // Armazena dados vindos da USB até receber um caractere de nova linha '\n'
-static struct usb_device *sniffer_device;        // Referência para o dispositivo USB
-static uint usb_in, usb_out;                       // Endereços das portas de entrada e saida da USB
-static char *usb_in_buffer, *usb_out_buffer;       // Buffers de entrada e saída da USB
-static int usb_max_size;                           // Tamanho máximo de uma mensagem USB
+static char recv_line[MAX_RECV_LINE];
+static struct usb_device *sniffer_device;
+static uint usb_in, usb_out;
+static char *usb_in_buffer, *usb_out_buffer;
+static int usb_max_size;
 
-// Variáveis para criar o arquivo no /sys/kernel/sniffer/{RSSI}
-static struct kobj_attribute  rssi_attribute = __ATTR(rssi, S_IRUGO | S_IWUSR, attr_show, attr_store);
-static struct attribute      *attrs[]       = {&rssi_attribute.attr, NULL};
-static struct attribute_group attr_group    = {.attrs = attrs};
-static struct kobject        *sys_obj;
+static struct kobj_attribute rssi_attribute = __ATTR(rssi, S_IRUGO | S_IWUSR, attr_show, NULL);
+static struct attribute *attrs[] = {&rssi_attribute.attr, NULL};
+static struct attribute_group attr_group = {.attrs = attrs};
+static struct kobject *sys_obj;
 
-// Registra o CP2102 (Chip USB-Serial do ESP32) no USB-Core do kernel
-#define VENDOR_ID  0x10C4  /* VendorID  do CP2102 */
-#define PRODUCT_ID 0xEA60  /* ProductID do CP2102 */
+/** Registers the CP2102 (ESP32's USB-Serial chip) on the kernel's UBS-Core */
+#define VENDOR_ID 0x10C4  /** VendorID  do CP2102 */
+#define PRODUCT_ID 0xEA60 /** ProductID do CP2102 */
 static const struct usb_device_id id_table[] = {{USB_DEVICE(VENDOR_ID, PRODUCT_ID)}, {}};
 MODULE_DEVICE_TABLE(usb, id_table);
 
-// Cria e registra o driver do sniffer no kernel
+/** Registers the sniffer drive on the kernel */
 static struct usb_driver sniffer_driver = {
-    .name        = "sniffer",		// Nome do driver
-    .probe       = usb_probe,       // Executado quando o dispositivo é conectado na USB
-    .disconnect  = usb_disconnect,  // Executado quando o dispositivo é desconectado na USB
-    .id_table    = id_table,        // Tabela com o VendorID e ProductID do dispositivo
+    .name = "sniffer", // Driver's name
+    .probe = usb_probe,
+    .disconnect = usb_disconnect,
+    .id_table = id_table, // Table with the product's VendorID and ProductID
 };
+
 module_usb_driver(sniffer_driver);
 
-// Executado quando o dispositivo é conectado na USB
-static int usb_probe(struct usb_interface *interface, const struct usb_device_id *id) {
+/**
+ * @brief This function executes when the device is connected to the USB port
+ *
+ * @param interface is the usb interface reference. The communication channel between
+ *          the USB driver and this module.
+ * @param id is the identification of the USB device we are talking to.
+ */
+static int usb_probe(struct usb_interface *interface, const struct usb_device_id *id)
+{
     struct usb_endpoint_descriptor *usb_endpoint_in, *usb_endpoint_out;
 
-    printk(KERN_INFO "Sniffer: Dispositivo conectado ...\n");
+    printk(KERN_INFO "Sniffer: Device connected ...\n");
 
-    // Cria arquivos do /sys/kernel/sniffer/*
     sys_obj = kobject_create_and_add("sniffer", kernel_kobj);
     sysfs_create_group(sys_obj, &attr_group);
 
-    // Detecta portas e aloca buffers de entrada e saída de dados na USB
     sniffer_device = interface_to_usbdev(interface);
     usb_find_common_endpoints(interface->cur_altsetting, &usb_endpoint_in, &usb_endpoint_out, NULL, NULL);
     usb_max_size = usb_endpoint_maxp(usb_endpoint_in);
@@ -66,122 +67,108 @@ static int usb_probe(struct usb_interface *interface, const struct usb_device_id
     return 0;
 }
 
-// Executado quando o dispositivo USB é desconectado da USB
-static void usb_disconnect(struct usb_interface *interface) {
-    printk(KERN_INFO "Sniffer: Dispositivo desconectado.\n");
-    if (sys_obj) kobject_put(sys_obj);      // Remove os arquivos em /sys/kernel/sniffer
-    kfree(usb_in_buffer);                   // Desaloca buffers
+/**
+ * @brief This function is executed when  the USB device is disconnected from the UBS entry.
+ *
+ * If the sys object is valid (i.e, not NULL), then the files created by this module
+ * will be removed and the USB buffers will dealoceted.
+ *
+ * @param interface Is the USB interface used by this module.
+ */
+static void usb_disconnect(struct usb_interface *interface)
+{
+    printk(KERN_INFO "Sniffer: Device disconnected.\n");
+    if (sys_obj)
+        kobject_put(sys_obj);
+    kfree(usb_in_buffer);
     kfree(usb_out_buffer);
 }
 
-// Envia um comando via USB, espera e retorna a resposta do dispositivo (convertido para int)
-// Exemplo de Comando:  SET_LED 80
-// Exemplo de Resposta: RES SET_LED 1
-static int usb_send_cmd(char *cmd, int param) {
-    int recv_size = 0;                      // Quantidade de caracteres no recv_line
+/**
+ * @brief This function sends a command via USB and waits for a response.
+ *
+ * @param cmd It's a string representing the command that is to be recognized and treated accordingly.
+ *
+ * @return returns an integer representing the RSSI value captured by the esp32 board.
+ */
+static int usb_send_cmd(char *cmd)
+{
+    int recv_size = 0;
     int ret, actual_size, i;
-    int retries = 10;                       // Tenta algumas vezes receber uma resposta da USB. Depois desiste.
-    char resp_expected[MAX_RECV_LINE];      // Resposta esperada do comando
-    char *resp_pos;                         // Posição na linha lida que contém o número retornado pelo dispositivo
-    long resp_number = -1;                  // Número retornado pelo dispositivo (e.g., valor do rssi, valor do ldr)
+    int retries = 10;
+    char resp_expected[MAX_RECV_LINE];
+    char *resp_pos;
+    long resp_number = -1;
 
-    printk(KERN_INFO "Sniffer: Enviando comando: %s\n", cmd);
+    printk(KERN_INFO "Sniffer: Sending command: %s\n", cmd);
 
-    if (param >= 0) sprintf(usb_out_buffer, "%s %d\n", cmd, param); // Se param >=0, o comando possui um parâmetro (int)
-    else sprintf(usb_out_buffer, "%s\n", cmd);                      // Caso contrário, é só o comando mesmo
+    sprintf(usb_out_buffer, "%s\n", cmd);
 
-    // Envia o comando (usb_out_buffer) para a USB
-    ret = usb_bulk_msg(sniffer_device, usb_sndbulkpipe(sniffer_device, usb_out), usb_out_buffer, strlen(usb_out_buffer), &actual_size, 1000*HZ);
-    if (ret) {
-        printk(KERN_ERR "Sniffer: Erro de codigo %d ao enviar comando!\n", ret);
+    ret = usb_bulk_msg(sniffer_device, usb_sndbulkpipe(sniffer_device, usb_out), usb_out_buffer, strlen(usb_out_buffer), &actual_size, 1000 * HZ);
+    if (ret)
+    {
+        printk(KERN_ERR "Sniffer: Error on code %d trying to sending the command!\n", ret);
         return -1;
     }
 
-    sprintf(resp_expected, "RES %s", cmd);  // Resposta esperada. Ficará lendo linhas até receber essa resposta.
+    sprintf(resp_expected, "RES %s", cmd);
 
-    // Espera pela resposta correta do dispositivo (desiste depois de várias tentativas)
-    while (retries > 0) {
-        // Lê dados da USB
-        ret = usb_bulk_msg(sniffer_device, usb_rcvbulkpipe(sniffer_device, usb_in), usb_in_buffer, min(usb_max_size, MAX_RECV_LINE), &actual_size, HZ*1000);
-        if (ret) {
-            printk(KERN_ERR "Sniffer: Erro ao ler dados da USB (tentativa %d). Codigo: %d\n", ret, retries--);
+    while (retries > 0)
+    {
+        ret = usb_bulk_msg(sniffer_device, usb_rcvbulkpipe(sniffer_device, usb_in), usb_in_buffer, min(usb_max_size, MAX_RECV_LINE), &actual_size, HZ * 1000);
+        if (ret)
+        {
+            printk(KERN_ERR "Sniffer: Error on reading data from USB (attempt %d). Code: %d\n", ret, retries--);
             continue;
         }
 
-        // Para cada caractere recebido ...
-        for (i=0; i<actual_size; i++) {
+        for (i = 0; i < actual_size; i++)
+        {
 
-            if (usb_in_buffer[i] == '\n') {  // Temos uma linha completa
+            if (usb_in_buffer[i] == '\n')
+            {
                 recv_line[recv_size] = '\0';
-                printk(KERN_INFO "Sniffer: Recebido uma linha: '%s'\n", recv_line);
+                printk(KERN_INFO "Sniffer: A line received: '%s'\n", recv_line);
 
-                // Verifica se o início da linha recebida é igual à resposta esperada do comando enviado
-                if (!strncmp(recv_line, resp_expected, strlen(resp_expected))) {
-                    printk(KERN_INFO "Sniffer: Linha eh resposta para %s! Processando ...\n", cmd);
-
-                    // Acessa a parte da resposta que contém o número e converte para inteiro
+                if (!strncmp(recv_line, resp_expected, strlen(resp_expected)))
+                {
+                    printk(KERN_INFO "Sniffer: The line is the answer for %s! Processing ...\n", cmd);
                     resp_pos = &recv_line[strlen(resp_expected) + 1];
                     kstrtol(resp_pos, 10, &resp_number);
-
                     return resp_number;
                 }
-                else { // Não é a linha que estávamos esperando. Pega a próxima.
-                    printk(KERN_INFO "Sniffer: Nao eh resposta para %s! Tentiva %d. Proxima linha...\n", cmd, retries--);
-                    recv_size = 0; // Limpa a linha lida (recv_line)
+                else
+                {
+                    printk(KERN_INFO "Sniffer: It is not the answer for %s! Attempt %d. Next line...\n", cmd, retries--);
+                    recv_size = 0;
                 }
             }
-            else { // É um caractere normal (sem ser nova linha), coloca no recv_line e lê o próximo caractere
-                recv_line[recv_size] = usb_in_buffer[i];
-                recv_size++;
-            }
+            else
+                recv_line[recv_size] = usb_in_buffer[i], ++recv_size;
         }
     }
-    return -1; // Não recebi a resposta esperada do dispositivo
+    return -1;
 }
 
-// Executado quando o arquivo /sys/kernel/sniffer/{rssi} é lido (e.g., cat /sys/kernel/sniffer/rssi)
-static ssize_t attr_show(struct kobject *sys_obj, struct kobj_attribute *attr, char *buff) {
-    int value;
+/**
+ * @brief This function executes when the rssi file is read.
+ *
+ * @param sys_obj The object (file) this module created.
+ * @param attr The file attributes associated with this object
+ * @param buff The pointer in which we'll put the result string usb_send_cmd returns.
+ *
+ * @return returns the length of the reponse.
+ */
+static ssize_t attr_show(struct kobject *sys_obj, struct kobj_attribute *attr, char *buff)
+{
+    int value = 0;
     const char *attr_name = attr->attr.name;
 
-    printk(KERN_INFO "Sniffer: Lendo %s ...\n", attr_name);
+    printk(KERN_INFO "Sniffer: Reading %s ...\n", attr_name);
 
     if (!strcmp(attr_name, "rssi"))
-        value = usb_send_cmd("GET_LED", -1);
-    else if (!strcmp(attr_name, "ldr"))
-        value = usb_send_cmd("GET_LDR", -1);
-    else
-        value = usb_send_cmd("GET_THRESHOLD", -1);
+        value = usb_send_cmd("GET_RSSI");
 
-    sprintf(buff, "%d\n", value);                   // Cria a mensagem com o valor do rssi, ldr ou threshold
-    return strlen(buff);
-}
-
-// Executado quando o arquivo /sys/kernel/sniffer/{rssi} é escrito (e.g., echo "100" | sudo tee -a /sys/kernel/sniffer/rssi)
-static ssize_t attr_store(struct kobject *sys_obj, struct kobj_attribute *attr, const char *buff, size_t count) {
-    long ret, value;
-    const char *attr_name = attr->attr.name;
-
-    ret = kstrtol(buff, 10, &value);
-    if (ret) {
-        printk(KERN_ALERT "Sniffer: valor de %s invalido.\n", attr_name);
-        return -EACCES;
-    }
-
-    printk(KERN_INFO "Sniffer: Setando %s para %ld ...\n", attr_name, value);
-
-    if (!strcmp(attr_name, "rssi"))
-        ret = usb_send_cmd("SET_LED", value);
-    else if (!strcmp(attr_name, "threshold"))
-        ret = usb_send_cmd("SET_THRESHOLD", value);
-    else {
-        printk(KERN_ALERT "Sniffer: o valor do ldr (sensor de luz) eh apenas para leitura.\n");
-        return -EACCES;
-    }
-    if (ret < 0) {
-        printk(KERN_ALERT "Sniffer: erro ao setar o valor do %s.\n", attr_name);
-        return -EACCES;
-    }
-
+    sprintf(buff, "%d\n", value);
     return strlen(buff);
 }
