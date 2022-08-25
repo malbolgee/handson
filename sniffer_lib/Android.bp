@@ -1,0 +1,12 @@
+cc_library {
+    name:        "sniffer_lib",
+    srcs:        [ "*.cpp" ],
+    export_include_dirs: [ "." ],
+
+    shared_libs: [ "libbase" ],
+    header_libs: [ "libbase_headers" ],
+    export_header_lib_headers: ["libbase_headers"],
+
+    installable: true,
+    vendor:      true
+}

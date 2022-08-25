@@ -1,0 +1,9 @@
+cc_binary {
+    name:         "sniffer_client",
+    srcs:         [ "sniffer_client.cpp" ],
+
+    shared_libs:  [ "sniffer_lib" ],
+    required:     [ "sniffer_lib" ],
+
+    vendor: true,
+}

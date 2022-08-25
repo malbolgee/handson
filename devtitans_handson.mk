@@ -10,4 +10,8 @@ PRODUCT_SYSTEM_PROPERTIES += \
     ro.devtitans.name=handson
 
 PRODUCT_PRODUCT_PROPERTIES += \
-    ro.product.devtitans.version=1.0
+    ro.product.devtitans.version=1.0 \
+    ro.devtitans.sniffer.allow_simulated=true
+
+PRODUCT_PACKAGES += \
+    sniffer_client
