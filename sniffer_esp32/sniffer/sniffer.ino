@@ -1,41 +1,19 @@
-#include "freertos/FreeRTOS.h"
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
 #include "nvs_flash.h"
-#include "driver/gpio.h"
-
-#define LED_GPIO_PIN                     5
-#define WIFI_CHANNEL_SWITCH_INTERVAL  (500)
-#define WIFI_CHANNEL_MAX               (13)
+#include "sniffer.h"
 
 uint8_t level = 0, channel = 1;
 
 static wifi_country_t wifi_country = {.cc="CN", .schan = 1, .nchan = 13};
 
-typedef struct {
-  unsigned frame_ctrl:16;
-  unsigned duration_id:16;
-  uint8_t addr1[6];
-  uint8_t addr2[6];
-  uint8_t addr3[6];
-  unsigned sequence_ctrl:16;
-  uint8_t addr4[6];
-} wifi_ieee80211_mac_hdr_t;
-
-typedef struct {
-  wifi_ieee80211_mac_hdr_t hdr;
-  uint8_t payload[0];
-} wifi_ieee80211_packet_t;
-
 wifi_promiscuous_pkt_t *ppkt;
-
-static esp_err_t event_handler(void *ctx, system_event_t *event);
-static void wifi_sniffer_init(void);
-static void wifi_sniffer_set_channel(uint8_t channel);
-static void wifi_sniffer_packet_handler(void *buff, wifi_promiscuous_pkt_type_t type);
+wifi_ieee80211_packet_t *ipkt;
+wifi_ieee80211_mac_hdr_t *hdr;
+wifi_header_frame_control_t *frame_ctrl;
 
 esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -73,21 +51,11 @@ void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type)
   if (type != WIFI_PKT_MGMT)
     return;
 
-    // In the original code, this was a local const variable,
-    // in order to access it inside the getRssi function, it was made
-    // into a global variable;
     ppkt = (wifi_promiscuous_pkt_t *)buff;
-    
-    String serialCommand;
-    while (Serial.available() > 0) {
-        char serialChar = Serial.read();
-        serialCommand += serialChar; 
+    ipkt = (wifi_ieee80211_packet_t *)ppkt->payload;
+    hdr = (wifi_ieee80211_mac_hdr_t *)&ipkt->hdr;
 
-        if (serialChar == '\n') {
-            processCommand(serialCommand);
-            serialCommand = "";
-        }
-    }
+    frame_ctrl = (wifi_header_frame_control_t *)&hdr->frame_ctrl;
 }
 
 void setup() {
@@ -96,9 +64,23 @@ void setup() {
 }
 
 void loop() {
-  vTaskDelay(WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS);
   wifi_sniffer_set_channel(channel);
   channel = (channel % WIFI_CHANNEL_MAX) + 1;
+
+
+    get_network_info();
+//   String serialCommand;
+//    while (Serial.available() > 0) {
+//        char serialChar = Serial.read();
+//        serialCommand += serialChar; 
+//
+//        if (serialChar == '\n') {
+//            processCommand(serialCommand);
+//            serialCommand = "";
+//        }
+//    }
+
+  delay(100);
 }
 
 /** This function process the comand giver by the user through the Serial. */
@@ -110,11 +92,33 @@ void processCommand(String command)
   // TODO: for now, we're just returning the RSSI, but in the future,
   // we'll need more information, like the MAC Address.
   if (command == "GET_RSSI")
-      Serial.printf("RES GET_RSSI %d\n", getRssi());
+  {
+        get_network_info();
+        
+//      Serial.printf("RES GET_RSSI %d\n", getRssi());
+
+    
+  }
+
 }
 
 /** This function returns the RSSI from the captured packet */
-int getRssi()
+void get_network_info()
 {
-    return ppkt->rx_ctrl.rssi;
+
+    if (frame_ctrl->type == WIFI_PKT_MGMT && frame_ctrl->subtype == BEACON)
+    {
+
+        const wifi_mgmt_beacon_t *beacon = (wifi_mgmt_beacon_t *) ipkt->payload;
+//        char ssid[32] = {0};
+//
+//        if (beacon->tag_length >= 32)
+//            strncpy(ssid, beacon->ssid, 31);
+//        else
+//            strncpy(ssid, beacon->ssid, beacon->tag_length);
+
+//        if (strlen(ssid) > 0)
+          Serial.printf("%.*s - %d\n", beacon->tag_length, beacon->ssid, ppkt->rx_ctrl.rssi);
+    }
+  
 }
