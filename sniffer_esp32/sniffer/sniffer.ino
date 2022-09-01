@@ -56,6 +56,19 @@ void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type)
     hdr = (wifi_ieee80211_mac_hdr_t *)&ipkt->hdr;
 
     frame_ctrl = (wifi_header_frame_control_t *)&hdr->frame_ctrl;
+
+    String serialCommand;
+    while (Serial.available() > 0) {
+        char serialChar = Serial.read();
+        serialCommand += serialChar;
+
+        if (serialChar == '\n') {
+            processCommand(serialCommand);
+            serialCommand = "";
+        }
+    }
+
+    delay(100);
 }
 
 void setup() {
@@ -67,58 +80,27 @@ void loop() {
   wifi_sniffer_set_channel(channel);
   channel = (channel % WIFI_CHANNEL_MAX) + 1;
 
-
-    get_network_info();
-//   String serialCommand;
-//    while (Serial.available() > 0) {
-//        char serialChar = Serial.read();
-//        serialCommand += serialChar; 
-//
-//        if (serialChar == '\n') {
-//            processCommand(serialCommand);
-//            serialCommand = "";
-//        }
-//    }
-
   delay(100);
 }
 
-/** This function process the comand giver by the user through the Serial. */
+/** This function process the comand given by the user through the Serial. */
 void processCommand(String command)
 {
   command.trim();
   command.toUpperCase();
 
-  // TODO: for now, we're just returning the RSSI, but in the future,
-  // we'll need more information, like the MAC Address.
+  // TODO: change command to 'get_network_info'
   if (command == "GET_RSSI")
-  {
         get_network_info();
-        
-//      Serial.printf("RES GET_RSSI %d\n", getRssi());
-
-    
-  }
-
 }
 
-/** This function returns the RSSI from the captured packet */
+/** This function returns the RSSI and SSID from the captured packet */
 void get_network_info()
 {
-
     if (frame_ctrl->type == WIFI_PKT_MGMT && frame_ctrl->subtype == BEACON)
     {
-
         const wifi_mgmt_beacon_t *beacon = (wifi_mgmt_beacon_t *) ipkt->payload;
-//        char ssid[32] = {0};
-//
-//        if (beacon->tag_length >= 32)
-//            strncpy(ssid, beacon->ssid, 31);
-//        else
-//            strncpy(ssid, beacon->ssid, beacon->tag_length);
-
-//        if (strlen(ssid) > 0)
-          Serial.printf("%.*s - %d\n", beacon->tag_length, beacon->ssid, ppkt->rx_ctrl.rssi);
+        if (beacon->tag_length > 0)
+           Serial.printf("%.*s %d\n", beacon->tag_length, beacon->ssid, ppkt->rx_ctrl.rssi);
     }
-  
 }
