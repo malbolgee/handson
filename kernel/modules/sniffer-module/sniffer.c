@@ -104,7 +104,7 @@ static int usb_send_cmd(char *cmd)
 
     sprintf(usb_out_buffer, "%s\n", cmd);
 
-    ret = usb_bulk_msg(sniffer_device, usb_sndbulkpipe(sniffer_device, usb_out), usb_out_buffer, strlen(usb_out_buffer), &actual_size, 1000 * HZ);
+    ret = usb_bulk_msg(sniffer_device, usb_sndbulkpipe(sniffer_device, usb_out), usb_out_buffer, strlen(usb_out_buffer), &actual_size, 1000);
     if (ret)
     {
         printk(KERN_ERR "Sniffer: Error on code %d trying to sending the command!\n", ret);
@@ -115,14 +115,14 @@ static int usb_send_cmd(char *cmd)
 
     while (retries > 0)
     {
-        ret = usb_bulk_msg(sniffer_device, usb_rcvbulkpipe(sniffer_device, usb_in), usb_in_buffer, min(usb_max_size, MAX_RECV_LINE), &actual_size, HZ * 1000);
+        ret = usb_bulk_msg(sniffer_device, usb_rcvbulkpipe(sniffer_device, usb_in), usb_in_buffer, min(usb_max_size, MAX_RECV_LINE), &actual_size, 1000);
         if (ret)
         {
             printk(KERN_ERR "Sniffer: Error on reading data from USB (attempt %d). Code: %d\n", ret, retries--);
             continue;
         }
 
-        for (i = 0; i < actual_size; i++)
+        for (i = 0; i < actual_size; ++i)
         {
 
             if (usb_in_buffer[i] == '\n')
@@ -144,7 +144,7 @@ static int usb_send_cmd(char *cmd)
                 }
             }
             else
-                recv_line[recv_size] = usb_in_buffer[i], ++recv_size;
+                recv_line[recv_size++] = usb_in_buffer[i];
         }
     }
     return -1;

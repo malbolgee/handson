@@ -13,6 +13,7 @@ namespace devtitans::sniffer_client
 
             std::cout << "Syntax: " << argv[0] << " " << std::endl;
             std::cout << "    Commands: get-rssi" << std::endl;
+            std::cout << "    Commands: get-rssi_random" << std::endl;
             exit(1);
         }
 

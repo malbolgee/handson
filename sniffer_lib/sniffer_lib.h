@@ -49,7 +49,7 @@ namespace devtitans::sniffer_lib
         int rssi_simulated = -1;
 
         /** Defines the directory contaning the rssi file is located. */
-        char kernel_dir_path[21] = "/sys/kernel/sniffer";
+        char kernel_dir_path[22] = "/sys/kernel/sniffer/";
 
         /**
          * @brief This method will read the values in the file
