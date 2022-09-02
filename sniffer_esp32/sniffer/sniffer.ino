@@ -67,20 +67,19 @@ void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type)
             serialCommand = "";
         }
     }
-
-    delay(100);
 }
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   wifi_sniffer_init();
 }
 
-void loop() {
+void loop()
+{
   wifi_sniffer_set_channel(channel);
   channel = (channel % WIFI_CHANNEL_MAX) + 1;
 
-  delay(100);
+  delay(500);
 }
 
 /** This function process the comand given by the user through the Serial. */
@@ -89,18 +88,19 @@ void processCommand(String command)
   command.trim();
   command.toUpperCase();
 
-  // TODO: change command to 'get_network_info'
-  if (command == "GET_RSSI")
+  if (command == "GET_NETWORK_INFO")
         get_network_info();
 }
 
 /** This function returns the RSSI and SSID from the captured packet */
 void get_network_info()
 {
+
+    // TODO: what if the packet is not a beacon?
     if (frame_ctrl->type == WIFI_PKT_MGMT && frame_ctrl->subtype == BEACON)
     {
         const wifi_mgmt_beacon_t *beacon = (wifi_mgmt_beacon_t *) ipkt->payload;
         if (beacon->tag_length > 0)
-           Serial.printf("%.*s %d\n", beacon->tag_length, beacon->ssid, ppkt->rx_ctrl.rssi);
+           Serial.printf("RES GET_NETWORK_INFO %.*s %d\n", beacon->tag_length, beacon->ssid, ppkt->rx_ctrl.rssi);
     }
 }

@@ -1,6 +1,8 @@
 #include <linux/module.h>
 #include <linux/usb.h>
 #include <linux/slab.h>
+#include <linux/string.h>
+#include <linux/errno.h>
 
 MODULE_AUTHOR("Grupo-2 <devtitans@icomp.ufam.edu.br>");
 MODULE_DESCRIPTION("Driver de acesso ao Sniffer (ESP32 com Chip Serial CP2102");
@@ -10,7 +12,7 @@ MODULE_LICENSE("GPL");
 
 static int usb_probe(struct usb_interface *ifce, const struct usb_device_id *id);
 static void usb_disconnect(struct usb_interface *ifce);
-static int usb_send_cmd(char *cmd);
+static char *usb_send_cmd(char *cmd);
 static ssize_t attr_show(struct kobject *sys_obj, struct kobj_attribute *attr, char *buff);
 
 static char recv_line[MAX_RECV_LINE];
@@ -19,8 +21,8 @@ static uint usb_in, usb_out;
 static char *usb_in_buffer, *usb_out_buffer;
 static int usb_max_size;
 
-static struct kobj_attribute rssi_attribute = __ATTR(rssi, S_IRUGO | S_IWUSR, attr_show, NULL);
-static struct attribute *attrs[] = {&rssi_attribute.attr, NULL};
+static struct kobj_attribute network_info_attribute = __ATTR(network_info, S_IRUGO | S_IWUSR, attr_show, NULL);
+static struct attribute *attrs[] = {&network_info_attribute.attr, NULL};
 static struct attribute_group attr_group = {.attrs = attrs};
 static struct kobject *sys_obj;
 
@@ -88,17 +90,13 @@ static void usb_disconnect(struct usb_interface *interface)
  * @brief This function sends a command via USB and waits for a response.
  *
  * @param cmd It's a string representing the command that is to be recognized and treated accordingly.
- *
- * @return returns an integer representing the RSSI value captured by the esp32 board.
  */
-static int usb_send_cmd(char *cmd)
+static char *usb_send_cmd(char *cmd)
 {
     int recv_size = 0;
     int ret, actual_size, i;
     int retries = 10;
     char resp_expected[MAX_RECV_LINE];
-    char *resp_pos;
-    long resp_number = -1;
 
     printk(KERN_INFO "Sniffer: Sending command: %s\n", cmd);
 
@@ -108,7 +106,7 @@ static int usb_send_cmd(char *cmd)
     if (ret)
     {
         printk(KERN_ERR "Sniffer: Error on code %d trying to sending the command!\n", ret);
-        return -1;
+        return NULL;
     }
 
     sprintf(resp_expected, "RES %s", cmd);
@@ -118,7 +116,7 @@ static int usb_send_cmd(char *cmd)
         ret = usb_bulk_msg(sniffer_device, usb_rcvbulkpipe(sniffer_device, usb_in), usb_in_buffer, min(usb_max_size, MAX_RECV_LINE), &actual_size, 1000);
         if (ret)
         {
-            printk(KERN_ERR "Sniffer: Error on reading data from USB (attempt %d). Code: %d\n", ret, retries--);
+            printk(KERN_ERR "Sniffer: Error on reading data from USB (attempt %d). Error: %d\n", retries--, ret);
             continue;
         }
 
@@ -133,9 +131,13 @@ static int usb_send_cmd(char *cmd)
                 if (!strncmp(recv_line, resp_expected, strlen(resp_expected)))
                 {
                     printk(KERN_INFO "Sniffer: The line is the answer for %s! Processing ...\n", cmd);
-                    resp_pos = &recv_line[strlen(resp_expected) + 1];
-                    kstrtol(resp_pos, 10, &resp_number);
-                    return resp_number;
+
+                    size_t size = strlen(resp_expected) + 1;
+                    size_t size_to_copy = strlen(&recv_line[size]);
+                    char *network_info = (char *)kmalloc(sizeof(char) * size_to_copy, GFP_KERNEL);
+                    memset(network_info, 0, sizeof(char) * size_to_copy);
+                    strncpy(network_info, &recv_line[size], size_to_copy);
+                    return network_info;
                 }
                 else
                 {
@@ -147,11 +149,11 @@ static int usb_send_cmd(char *cmd)
                 recv_line[recv_size++] = usb_in_buffer[i];
         }
     }
-    return -1;
+    return NULL;
 }
 
 /**
- * @brief This function executes when the rssi file is read.
+ * @brief This function executes when the network_info file is read.
  *
  * @param sys_obj The object (file) this module created.
  * @param attr The file attributes associated with this object
@@ -161,14 +163,21 @@ static int usb_send_cmd(char *cmd)
  */
 static ssize_t attr_show(struct kobject *sys_obj, struct kobj_attribute *attr, char *buff)
 {
-    int value = 0;
+    char *network_info = NULL;
     const char *attr_name = attr->attr.name;
 
     printk(KERN_INFO "Sniffer: Reading %s ...\n", attr_name);
 
-    if (!strcmp(attr_name, "rssi"))
-        value = usb_send_cmd("GET_RSSI");
+    if (!strcmp(attr_name, "network_info"))
+        network_info = usb_send_cmd("GET_NETWORK_INFO");
 
-    sprintf(buff, "%d\n", value);
+    if (network_info == NULL)
+        sprintf(buff, "%s\n", "NULL");
+    else
+    {
+        sprintf(buff, "%s\n", network_info);
+        kfree(network_info);
+    }
+
     return strlen(buff);
 }

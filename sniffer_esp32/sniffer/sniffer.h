@@ -45,7 +45,6 @@ typedef struct {
 
 typedef struct {
   wifi_header_frame_control_t frame_ctrl;
-//  unsigned duration_id:16;
   uint8_t addr1[6];
   uint8_t addr2[6];
   uint8_t addr3[6];
