@@ -12,17 +12,17 @@ namespace devtitans::sniffer_client
         {
 
             std::cout << "Syntax: " << argv[0] << " " << std::endl;
-            std::cout << "    Commands: get-rssi" << std::endl;
-            std::cout << "    Commands: get-rssi_random" << std::endl;
+            std::cout << "    Command: get_network_info" << std::endl;
+            std::cout << "    Command: get_network_info_random" << std::endl;
             exit(1);
         }
 
         sniffer_lib::Sniffer sniffer;
 
-        if (!strcmp(argv[1], "get_rssi"))
-            std::cout << sniffer.get_rssi_value() << std::endl;
-        else if (!strcmp(argv[1], "get_rssi_random"))
-            std::cout << sniffer.get_rssi_random() << std::endl;
+        if (!strcmp(argv[1], "get_network_info"))
+            std::cout << sniffer.get_network_info() << std::endl;
+        else if (!strcmp(argv[1], "get_network_info_random"))
+            std::cout << sniffer.get_network_info_random() << std::endl;
         else
             std::cout << "Invalid command." << std::endl;
     }

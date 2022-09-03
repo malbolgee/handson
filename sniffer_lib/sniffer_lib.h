@@ -1,9 +1,9 @@
 #pragma once
 
 #include <fstream>
-#include <android-base/properties.h>
 #include <sys/stat.h>
 #include <random>
+#include <android-base/properties.h>
 
 namespace devtitans::sniffer_lib
 {
@@ -20,7 +20,7 @@ namespace devtitans::sniffer_lib
          * @brief Verifies if the directory /sys/kernel/sniffer exists.
          *
          * If this directory exists, then the Sniffer device is fisically connected,
-         * otherwise, verify the devtitans.sniffer.allow_sumulated property, to
+         * otherwise, check the devtitans.sniffer.allow_sumulated property, to
          * see if the sumulated values can be used.
          *
          * @return returns an integer representing a state, that can be either DEVICE_NOT_FOUND,
@@ -29,44 +29,49 @@ namespace devtitans::sniffer_lib
         int connect();
 
         /**
-         * @brief returns the RSSI value.
+         * @brief returns the network info.
          *
-         * @return returns an int representing the RSSI value.
+         * @return returns a std::string representing the network info (SSID and RSSI).
          */
-        int get_rssi_value();
-        
+        std::string get_network_info();
+
         /**
-         * @brief returns a random value for the RSSI.
-         * 
-         * @return returns an integer representing a random RSSI value.
+         * @brief returns a random value for the network info.
+         *
+         * @return returns a std::string representing the nertwork info (SSID and RSSI).
          */
-        int get_rssi_random();
+        std::string get_network_info_random();
 
     private:
-        std::string rssi_name = "rssi";
+        /** This is the file name created by the kernel module. */
+        std::string network_info_name = "network_info";
 
-        /** This is the variable of the simulated value of the RSSI. */
-        int rssi_simulated = -1;
+        /** This is the variable of the simulated value of the network info (SSDI and RSSI). */
+        std::string network_info_simulated = "malbolge -1";
 
-        /** Defines the directory contaning the rssi file is located. */
-        char kernel_dir_path[22] = "/sys/kernel/sniffer/";
+        /** Defines the directory contaning the network_info file is located. */
+        std::string kernel_dir_path = "/sys/kernel/sniffer/";
+
+        /**  Keeps a char * version of the path for backward compatibility reasons */
+        char kernel_dir_path_char[22] = "/sys/kernel/sniffer/";
 
         /**
          * @brief This method will read the values in the file
-         *          in the /sys/kernel/rssi directory.
+         *          located at the /sys/kernel/ directory.
          *
-         * @param file is the file path for the rssi
-         * @return returns a integer
+         * @param file is the file path for the network_info
+         * @return returns a std::string representing the network info read from the file
          */
-        int readFileValue(std::string file);
+        std::string readFileValue(std::string file);
 
-        /** Returns the directory  */
-        char *get_kernel_directory();
+        /** Returns the directory where the kernel module creates the file interface.  */
+        std::string get_kernel_directory();
 
-        /** Returns the simulated rssi value. */
-        int get_rssi_simulated();
+        /** Returns a simulated network info. */
+        std::string get_network_info_simulated();
 
-        std::string get_rssi_name();
+        /** returns the network info file name. */
+        std::string get_network_info_name();
     };
 
 }

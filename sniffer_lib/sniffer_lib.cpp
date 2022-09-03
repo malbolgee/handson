@@ -8,7 +8,7 @@ namespace devtitans::sniffer_lib
 
         struct stat dir_stat;
 
-        if (stat(this->get_kernel_directory(), &dir_stat) == 0)
+        if (stat(this->kernel_dir_path_char, &dir_stat) == 0)
             if (S_ISDIR(dir_stat.st_mode))
                 return DEVICE_IS_CONNECTED;
 
@@ -20,60 +20,63 @@ namespace devtitans::sniffer_lib
             return DEVICE_IS_SIMULATED;
     }
 
-    int Sniffer::readFileValue(std::string file)
+    std::string Sniffer::readFileValue(std::string file)
     {
 
         int connected = this->connect();
 
         if (connected == DEVICE_IS_SIMULATED)
         {
-            if (file == "rssi")
-                return this->get_rssi_simulated();
+            if (file == this->network_info_name)
+                return this->get_network_info_simulated();
         }
         else if (connected == DEVICE_IS_CONNECTED)
         {
 
-            int value;
-            const std::string file_name = std::string(this->get_kernel_directory()) + file;
-            std::ifstream file(file_name);
+            std::string value;
+            const std::string file_name = this->get_kernel_directory() + file;
+            std::fstream network_info;
 
-            if (file.is_open())
+            network_info.open(file_name, std::ios::in);
+
+            if (network_info.is_open())
             {
-                file >> value;
-                file.close();
-                return value;
+                std::string line;
+                getline(network_info, line);
+                network_info.close();
+                return line;
             }
         }
 
-        return -1;
+        return NULL;
     }
 
-    int Sniffer::get_rssi_value()
+    std::string Sniffer::get_network_info()
     {
-        return this->readFileValue(this->get_rssi_name());
+        return this->readFileValue(this->get_network_info_name());
     }
 
-    char *Sniffer::get_kernel_directory()
+    std::string Sniffer::get_kernel_directory()
     {
         return this->kernel_dir_path;
     }
 
-    std::string Sniffer::get_rssi_name()
+    std::string Sniffer::get_network_info_name()
     {
-        return this->rssi_name;
+        return this->network_info_name;
     }
 
-    int Sniffer::get_rssi_simulated()
+    std::string Sniffer::get_network_info_simulated()
     {
-        return this->rssi_simulated;
+        return this->network_info_simulated;
     }
 
-    int Sniffer::get_rssi_random()
+    std::string Sniffer::get_network_info_random()
     {
         std::random_device dev;
         std::mt19937 rng(dev());
-        std::uniform_int_distribution<std::mt19937::result_type> dist100(0,100);
-        return (int) dist100(rng) * -1;
+        std::uniform_int_distribution<std::mt19937::result_type> dist100(0, 100);
+        return "malbolge " + std::to_string((dist100(rng)) * (-1));
     }
 
 }
