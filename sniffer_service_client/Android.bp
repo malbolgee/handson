@@ -1,0 +1,9 @@
+cc_binary {
+    name: "sniffer_service_client",
+    srcs: ["sniffer_service_client.cpp"],
+    vendor: true,
+    shared_libs: [
+        "libbinder_ndk",
+        "devtitans.sniffer-V1-ndk_platform",
+    ]
+}
