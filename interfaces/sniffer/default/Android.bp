@@ -1,0 +1,21 @@
+cc_binary {
+    name:                  "devtitans.sniffer-service",
+    relative_install_path: "hw",
+    init_rc:               ["sniffer-default.rc"],
+    vintf_fragments:       ["sniffer-default.xml"],
+    vendor:                true,
+
+    shared_libs: [
+        "libbase",
+        "libbinder_ndk",
+        "sniffer_lib",
+        "devtitans.sniffer-V1-ndk_platform",
+    ],
+
+    srcs: [
+        "sniffer_service.cpp",
+        "main.cpp"
+    ],
+
+    required: [ "sniffer_lib" ],
+}
