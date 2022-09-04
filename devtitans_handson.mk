@@ -16,7 +16,8 @@ PRODUCT_PACKAGES += \
     sniffer_client \
     devtitans.sniffer \
     devtitans.sniffer-service \
-    sniffer_service_client
+    sniffer_service_client \
+    devtitans.sniffermanager \
 
 BOARD_SEPOLICY_DIRS += device/devtitans/handson/sepolicy
 

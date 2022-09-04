@@ -1,0 +1,7 @@
+java_library {
+    name:        "networkinfo",
+    srcs:        [ "java/**/*.java" ],
+    vendor: true,
+    platform_apis:  true,
+    sdk_version: "current"
+}
