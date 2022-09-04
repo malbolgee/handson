@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">SnifferTest</string>
+    <string name="network_info">SSID: %1$s RSSI: %2$d</string>
+    <string name="network_info_default">NETWORK INFO</string>
+    <string name="button_text">GET_NETWORK_INFO</string>
+</resources>
