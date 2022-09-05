@@ -1,0 +1,28 @@
+java_library {
+    name:        "devtitans.networkutils",
+    srcs:        [ "java/com/devtitans/libs/net/*.java" ],
+    platform_apis:  true,
+    system_ext_specific: true,
+    sdk_version: "current"
+}
+
+java_library {
+    name: "devtitans.sniffermanager",
+
+    srcs: [ "java/com/devtitans/internal/*.java" ],
+
+    static_libs: [ "devtitans.sniffer-V1-java", "devtitans.networkutils" ],
+    required:    [ "devtitans.sniffermanager.xml", ],
+
+    system_ext_specific: true,
+    platform_apis:       true,
+    installable:         true,
+}
+
+prebuilt_etc {
+    name: "devtitans.sniffermanager.xml",
+    src:  "permissions/devtitans.sniffermanager.xml",
+    filename_from_src:     true,
+    relative_install_path: "permissions",
+    system_ext_specific:   true,
+}
