@@ -1,4 +1,4 @@
-package com.net.handson;
+package com.devtitans.libs.net;
 
 import android.util.Log;
 
@@ -72,7 +72,7 @@ public class NetworkInfo {
 
         setSsid(networkInfoInternal[0]);
         setRssi(Integer.parseInt(networkInfoInternal[1]));
-        Log.d(TAG, "Done parsing network info");
+        Log.d(TAG, "Done parsing Network info");
     }
 
     @Override

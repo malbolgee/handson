@@ -1,11 +1,11 @@
-package com.devtitans.handson;
+package com.devtitans.internal;
 
 import android.util.Log;
 import android.os.ServiceManager;
 import android.os.IBinder;
 import android.os.RemoteException;
 
-import com.net.handson.NetworkInfo;
+import com.devtitans.libs.net.NetworkInfo;
 
 import devtitans.sniffer.ISniffer;
 
