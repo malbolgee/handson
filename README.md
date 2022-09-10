@@ -158,7 +158,7 @@ $ lunch
 | aosp_flame-userdebug           | Product to be used in a Google Pixel 4 device.               |
 | beagle_x15-userdebug           | Product specifically for the [Beagle x15](https://beagleboard.org/x15) board. |
 | sdk_phone_x86_64-userdebug     | Product for the emulator executing in a X86 64 bits processor. |
-|                                | Product that this repository creates. **We'll use this one**. |
+| devtitans_handson-eng          | Product that this repository creates. **We'll use this one**. |
 
 In addition, one can observe the end of the names, notice three compilation variations:
 
