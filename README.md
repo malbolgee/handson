@@ -94,7 +94,7 @@ The -c flag (current) will synchronize only the current branch. The -j flag indi
 
 ### Creating a new product
 
-Go inside your newly synched aosp repository
+Go inside your newly synched AOSP repository
 
 ```sh
 $ cd device
@@ -143,7 +143,7 @@ Here are some usefull commands that this script declares:
 | croot       | Go back to the AOSP root directory                           |
 | m           | Compiles Android                                             |
 
-As shown above, one of the declared commands by envsetup.sh is the ```lunch``` command. This command selects which product will be worked in the current terminal session. Basically, it configures a set of enviroment variables on your shell session relatedto the selected device. Just like envsetup.sh, this command needs to be executed in each open shell. To see the list of products, simply do:
+As shown above, one of the declared commands by envsetup.sh is the ```lunch``` command. This command selects which product will be worked on in the current terminal session. Basically, it configures a set of environment variables on your shell session related to the selected device. Just like envsetup.sh, this command needs to be executed in each open shell. To see the list of products, simply do:
 
 ```sh
 $ lunch
@@ -164,8 +164,8 @@ In addition, one can observe the end of the names, notice three compilation vari
 
 | **Variation** | **Description**                                              |
 | ------------- | ------------------------------------------------------------ |
-| user          | Android final version that will be executed by users, without debug information a no root acess. |
-| userdebug     | Same as the previous, but with debug information and root acess. |
+| user          | Android final version that will be executed by users, without debug information a no root access. |
+| userdebug     | Same as the previous, but with debug information and root access. |
 | eng           | Development version, with extra tools, debug information and root access. |
 
 ```sh
@@ -192,7 +192,7 @@ This project uses a kernel module in order to be able to use the esp32 board tha
 
 ### Downloading, configuring and compiling the kernel
 
-The official Linux kernel is developed and maitained by Linux Torvalds, and can be found on [GitHub](https://github.com/torvalds/linux). However, Android includes a set of modules, configurations and modifications that they do uppen the original kernel. To make it easier, this modified kernel is available [here](https://android.googlesource.com/kernel/manifest/+refs).
+The official Linux kernel is developed and maintained by Linus Torvalds and can be found on [GitHub](https://github.com/torvalds/linux). However, Android includes a set of modules, configurations, and modifications that they do upon the original kernel. To make it easier, this modified kernel is available [here](https://android.googlesource.com/kernel/manifest/+refs).
 
 To compile the kernel, some packages are necessary
 
@@ -200,7 +200,7 @@ To compile the kernel, some packages are necessary
 $ sudo apt install kernel-package bzip2 lib32z1 libelf-dev qt5-default qttools5-dev-tools qttools5-dev meld geany gtk+-2.0 libgtk-3-dev libwebkit2gtk-4.0-dev autogen libgtk2.0-dev libglade2-dev
 ```
 
-Although the kernel source code is available from Google, it does not part of AOSP. So we'll need to create a new directory (outsite of AOSP) to store the code
+Although the kernel source code is available from Google, it is not part of the AOSP source code. So we'll need to create a new directory (outside of AOSP) to store the code
 
 ```sh
 $ cd ~
@@ -210,14 +210,14 @@ $ cd kernel
 
 After that, we'll use repo to download the kernel source code.
 
-NOTE: Use a different terminal session to do this, or the kernel repo will overwrite the AOSP repo.
+**NOTE**: Use a different terminal session to do this, or the kernel repo will overwrite the AOSP repo.
 
 ```sh
 $ init --depth=1 -u https://android.googlesource.com/kernel/manifest -b common-android12-5.10-lts
 $ repo sync --force-sync --no-clone-bundle --no-tags -j$(nproc)
 ```
 
-Aproximadetely 5GB will be downloaded. As we are going to copy the compiled files manually to the AOSP directory, we are going to change the kernel configuration file. Put the code below at the ***end*** of the file
+Approximately 5 GB will be downloaded. As we are going to copy the compiled files manually to the AOSP directory, we are going to change the kernel configuration file. Put the code below at the ***end*** of the file
 
 ```sh
 $ vim common-modules/virtual-device/build.config.virtual_device.x86_64
@@ -261,9 +261,9 @@ $ cp out/android12-5.10/dist/bzImage ~/aosp/device/devtitans/handson/kernel/imag
 $ cp out/android12-5.10/dist/*.ko ~/aosp/device/devtitans/handson/kernel/image/
 ```
 
-**NOTE**: This repository already comes with a pre-compiled kernel image and modules. Only do this to test or if you want to update the kernel or its modules.
+**NOTE**: This repository already comes with a pre-compiled kernel image and modules. Only do this (compile) to test or if you want to update the kernel or its modules.
 
-Next, we need to tell the build system that we are goingo to use our new kernel. To do this, we'll need to change an emulator configuration file
+Next, we need to tell the build system that we are going to use our new kernel. To do this, we'll need to change an emulator configuration file
 
 ```sh
 $ cd ~/aosp
@@ -303,16 +303,16 @@ And the new one
 
 ### Including the sniffer module
 
-For this project, we'll use a custom module that can comunicate with the esp32 board, sending commands and managing reponses. Because of that, we need to include this module in the compilation process to generate the ```.ko``` file module file that will later be loaded into the kernel.
+For this project, we'll use a custom module that can communicate with the esp32 board, sending commands and managing responses. Because of that, we need to include this module in the compilation process to generate the ```.ko``` file module file that will later be loaded into the kernel.
 
-Lets begin copying the Sniffer code to the kernel directory
+Let's begin copying the Sniffer code to the kernel directory
 
 ```sh
 $ cp ~/kernel
 $ cp -r -p ~/aosp/device/devtitans/handson/kernel/modules/sniffer-module .
 ```
 
-Now, lets edit the kernel compiling configuration file to add our module
+Now, let's edit the kernel compiling configuration file to add our module
 
 ```makefile
 FILES=""
@@ -332,7 +332,7 @@ modules
 EXT_MODULES+=" sniffer-module"
 ```
 
-Next, lets compile
+Next, let's compile
 
 ```sh
 $ time BUILD_CONFIG=common-modules/virtual-device/build.config.virtual_device.x86_64 SKIP_MRPROPER=1 build/build.sh -j$(nproc)
