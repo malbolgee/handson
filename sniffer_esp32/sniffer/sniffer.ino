@@ -9,6 +9,7 @@
 uint8_t channel = 1;
 
 static wifi_country_t wifi_country = {.cc = "CN", .schan = 1, .nchan = 13};
+static wifi_promiscuous_filter_t filter = {.filter_mask = WIFI_PROMIS_FILTER_MASK_MGMT};
 
 esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -25,6 +26,7 @@ void wifi_sniffer_init(void)
     ESP_ERROR_CHECK(esp_wifi_set_country(&wifi_country));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
+    ESP_ERROR_CHECK(esp_wifi_set_promiscuous_filter(&filter));
     ESP_ERROR_CHECK(esp_wifi_start());
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_promiscuous_rx_cb(&wifi_sniffer_packet_handler);
@@ -41,6 +43,14 @@ void wifi_sniffer_set_channel(uint8_t channel)
  *
  * Once the user give an input, the while will trap the code until the command
  * is finished being processed.
+ *
+ * It is possible that when the board is called, there has been any packet captured
+ * at this specific moment. The callback function seems to be called in a specific
+ * time range, which is reasonable to assume must be when the terminals are sending
+ * beacon packets.
+ *
+ * We cannot really control this behavior, but be aware that this may cause the board
+ * to not respond sometimes when the kernel asks something.
  */
 void wifi_sniffer_packet_handler(void *buff, wifi_promiscuous_pkt_type_t type)
 {
@@ -105,7 +115,7 @@ void get_network_info(void *buff)
 
     const hdr_frame_control_t *frame_ctrl = (hdr_frame_control_t *)&hdr->frame_ctrl;
 
-    if (frame_ctrl->type == WIFI_PKT_MGMT && frame_ctrl->subtype == BEACON)
+    if (frame_ctrl->subtype == BEACON)
     {
         const mgmt_beacon_t *beacon = (mgmt_beacon_t *)packet->payload;
         if (beacon->tag_length > 0)
