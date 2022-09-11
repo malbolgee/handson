@@ -49,14 +49,6 @@ void wifi_sniffer_set_channel(uint8_t channel)
  */
 void wifi_sniffer_packet_handler(void *buff, wifi_promiscuous_pkt_type_t type)
 {
-    // if (type != WIFI_PKT_MGMT)
-    //     return;
-
-    // ppkt = (wifi_promiscuous_pkt_t *)buff;
-    // ipkt = (wifi_ieee80211_packet_t *)ppkt->payload;
-    // hdr = (wifi_ieee80211_mac_hdr_t *)&ipkt->hdr;
-
-    // frame_ctrl = (wifi_header_frame_control_t *)&hdr->frame_ctrl;
 
     String serialCommand;
     while (Serial.available() > 0)
