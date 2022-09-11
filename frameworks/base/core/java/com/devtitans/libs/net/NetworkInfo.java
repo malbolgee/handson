@@ -1,5 +1,7 @@
 package com.devtitans.libs.net;
 
+import java.text.ParseException;
+
 import android.util.Log;
 
 /**
@@ -63,16 +65,20 @@ public class NetworkInfo {
      *
      * This parsing will extract the RSSI and SSID from the network info string.
      */
-    private void parseNetworkInfo() throws IllegalStateException, NumberFormatException {
-        Log.d(TAG, "Parsing Network info");
-        final String networkInfoInternal[] = getNetworkInfoString().split(" ");
+    private void parseNetworkInfo() throws NumberFormatException, NetworkParseException {
+        Log.d(TAG, "Parsing Network Info");
+        final String localNetworkInfo = getNetworkInfoString();
+        int index = localNetworkInfo.lastIndexOf(" ");
 
-        if (networkInfoInternal.length < 2)
-            throw new IllegalStateException("Insufficient Network info");
+        if (index < 0)
+            throw new NetworkParseException("Could not parse Network Info");
+
+        final String[] networkInfoInternal = { localNetworkInfo.substring(0, index),
+                localNetworkInfo.substring(index + 1) };
 
         setSsid(networkInfoInternal[0]);
         setRssi(Integer.parseInt(networkInfoInternal[1]));
-        Log.d(TAG, "Done parsing Network info");
+        Log.d(TAG, "Done parsing Network Info");
     }
 
     @Override

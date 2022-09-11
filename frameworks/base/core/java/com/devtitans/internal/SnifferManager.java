@@ -6,6 +6,7 @@ import android.os.IBinder;
 import android.os.RemoteException;
 
 import com.devtitans.libs.net.NetworkInfo;
+import com.devtitans.libs.net.NetworkParseException;
 
 import devtitans.sniffer.ISniffer;
 
@@ -82,15 +83,20 @@ public class SnifferManager {
      *
      * <p>
      * This method calls for the service method and then creates a
-     * {@link com.net.handson.NetworkInfo}
+     * {@link com.devtitans.libs.net.NetworkInfo}
      * object out of the string received from the service.
+     *
+     * <p>
+     * It is advised to call this method from a thread,
+     * as it may take some time to respond.
      */
     public NetworkInfo getNetworkInfo() throws RemoteException {
         Log.d(TAG, "Called getNetworkInfo() method");
 
         try {
             return new NetworkInfo(getService().get_network_info());
-        } catch (IllegalStateException | NumberFormatException e) {
+        } catch (NumberFormatException | NetworkParseException e) {
+            Log.d(TAG, e.getMessage());
             return null;
         }
     }
