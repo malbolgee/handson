@@ -6,14 +6,9 @@
 #include "nvs_flash.h"
 #include "sniffer.h"
 
-uint8_t level = 0, channel = 1;
+uint8_t channel = 1;
 
 static wifi_country_t wifi_country = {.cc = "CN", .schan = 1, .nchan = 13};
-
-wifi_promiscuous_pkt_t *promiscuous_packet;
-packet_t *packet;
-mac_hdr_t *hdr;
-hdr_frame_control_t *frame_ctrl;
 
 esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -74,7 +69,6 @@ void loop()
 {
     wifi_sniffer_set_channel(channel);
     channel = (channel % WIFI_CHANNEL_MAX) + 1; // change channel every 500 miliseconds
-
     delay(500);
 }
 
@@ -105,12 +99,11 @@ void processCommand(String command, void *buff)
  */
 void get_network_info(void *buff)
 {
+    const wifi_promiscuous_pkt_t *promiscuous_packet = (wifi_promiscuous_pkt_t *)buff;
+    const packet_t *packet = (packet_t *)promiscuous_packet->payload;
+    const mac_hdr_t *hdr = (mac_hdr_t *)&packet->hdr;
 
-    promiscuous_packet = (wifi_promiscuous_pkt_t *)buff;
-    packet = (packet_t *)promiscuous_packet->payload;
-    hdr = (mac_hdr_t *)&packet->hdr;
-
-    frame_ctrl = (hdr_frame_control_t *)&hdr->frame_ctrl;
+    const hdr_frame_control_t *frame_ctrl = (hdr_frame_control_t *)&hdr->frame_ctrl;
 
     if (frame_ctrl->type == WIFI_PKT_MGMT && frame_ctrl->subtype == BEACON)
     {
