@@ -14,7 +14,7 @@ import android.widget.Button;
 import android.os.RemoteException;
 import android.widget.TextView;
 
-import com.devtitans.libs.net.NetworkInfo;
+import com.devtitans.libs.net.SnifferNetworkInfo;
 import com.devtitans.internal.SnifferManager;
 
 public class MainActivity extends AppCompatActivity {
@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
     private void onClick(View v) {
         Thread workerThread = new Thread(() -> {
 
-            final NetworkInfo netInfo;
+            final SnifferNetworkInfo netInfo;
             try {
                 netInfo = mSnifferManager.getNetworkInfo();
             } catch (RemoteException re) {

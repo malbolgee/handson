@@ -18,7 +18,7 @@
 
 package devtitans.sniffer;
 @VintfStability
-interface ISniffer {
-  int connect();
-  devtitans.sniffer.NetworkInfo get_network_info();
+parcelable NetworkInfo {
+  int rssi;
+  String ssid;
 }

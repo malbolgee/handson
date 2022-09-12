@@ -18,7 +18,8 @@
 
 package devtitans.sniffer;
 @VintfStability
-interface ISniffer {
-  int connect();
-  devtitans.sniffer.NetworkInfo get_network_info();
+enum SnifferDeviceState {
+  DEVICE_NOT_FOUND = 0,
+  DEVICE_IS_CONNECTED = 1,
+  DEVICE_IS_SIMULATED = 2,
 }

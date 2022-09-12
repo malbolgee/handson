@@ -18,9 +18,18 @@ namespace aidl::devtitans::sniffer
 
     public:
         ndk::ScopedAStatus connect(int32_t *_aidl_return) override;
-        ndk::ScopedAStatus get_network_info(std::string *_aidl_return) override;
+        ndk::ScopedAStatus get_network_info(aidl::devtitans::sniffer::NetworkInfo *_aidl_return) override;
 
     private:
+
+        int default_rssi = 0;
+        std::string default_ssid = "UNKNOWN";
+
         Sniffer sniffer;
+
+        aidl::devtitans::sniffer::NetworkInfo parseString(std::string info);
+
+        int get_default_rssi();
+        std::string get_default_ssid();
     };
 }

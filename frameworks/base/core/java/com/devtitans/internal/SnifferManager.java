@@ -5,8 +5,10 @@ import android.os.ServiceManager;
 import android.os.IBinder;
 import android.os.RemoteException;
 
-import com.devtitans.libs.net.NetworkInfo;
-import com.devtitans.libs.net.NetworkParseException;
+import com.devtitans.libs.net.SnifferNetworkInfo;
+
+import devtitans.sniffer.NetworkInfo;
+import devtitans.sniffer.SnifferDeviceState;
 
 import devtitans.sniffer.ISniffer;
 
@@ -25,6 +27,10 @@ import devtitans.sniffer.ISniffer;
  */
 public class SnifferManager {
     private static final String TAG = SnifferManager.class.getSimpleName();
+
+    public static final int DEVICE_NOT_FOUND = SnifferDeviceState.DEVICE_NOT_FOUND;
+    public static final int DEVICE_IS_CONNECTED = SnifferDeviceState.DEVICE_IS_CONNECTED;
+    public static final int DEVICE_IS_SIMULATED = SnifferDeviceState.DEVICE_IS_SIMULATED;
 
     private static final String SERVICE_NAME = "devtitans.sniffer.ISniffer/default";
 
@@ -79,25 +85,27 @@ public class SnifferManager {
     }
 
     /**
-     * Returns the NetworkInfo captured by the esp32 board.
+     * Returns the SnifferNetworkInfo captured by the esp32 board.
      *
      * <p>
      * This method calls for the service method and then creates a
-     * {@link com.devtitans.libs.net.NetworkInfo}
-     * object out of the string received from the service.
+     * {@link com.devtitans.libs.net.SnifferNetworkInfo}
+     * object out of the NetworkInfo object received from the service.
      *
      * <p>
      * It is advised to call this method from a thread,
      * as it may take some time to respond.
      */
-    public NetworkInfo getNetworkInfo() throws RemoteException {
+    public SnifferNetworkInfo getNetworkInfo() throws RemoteException {
         Log.d(TAG, "Called getNetworkInfo() method");
 
-        try {
-            return new NetworkInfo(getService().get_network_info());
-        } catch (NumberFormatException | NetworkParseException e) {
-            Log.d(TAG, e.getMessage());
-            return null;
-        }
+        NetworkInfo networkInfo = getService().get_network_info();
+
+        SnifferNetworkInfo.Builder builder = new SnifferNetworkInfo.Builder();
+
+        builder.setRssi(networkInfo.rssi)
+               .setSsid(networkInfo.ssid);
+
+        return builder.Build();
     }
 }

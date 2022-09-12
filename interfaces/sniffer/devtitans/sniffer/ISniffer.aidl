@@ -1,7 +1,9 @@
 package devtitans.sniffer;
 
+import devtitans.sniffer.NetworkInfo;
+
 @VintfStability
 interface ISniffer {    
     int connect();
-    String get_network_info();
+    NetworkInfo get_network_info();
 }

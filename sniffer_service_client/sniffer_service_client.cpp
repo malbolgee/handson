@@ -1,5 +1,6 @@
 #include <android/binder_manager.h>
 #include <aidl/devtitans/sniffer/ISniffer.h>
+#include <aidl/devtitans/sniffer/NetworkInfo.h>
 #include <iostream>
 #include <errno.h>
 
@@ -14,10 +15,10 @@ int main()
         return EXIT_FAILURE;
     }
 
-    std::string _aidl_return;
+    aidl::devtitans::sniffer::NetworkInfo _aidl_return;
     ndk::ScopedAStatus status = service->get_network_info(&_aidl_return);
-    std::string network_info = static_cast<std::string>(_aidl_return);
-    std::cout << "network info: " << network_info << std::endl;
+    aidl::devtitans::sniffer::NetworkInfo network_info = static_cast<aidl::devtitans::sniffer::NetworkInfo>(_aidl_return);
+    std::cout << "network info: SSID -> " << network_info.ssid << "RSSI -> " << network_info.rssi << std::endl;
 
     return EXIT_SUCCESS;
 }
