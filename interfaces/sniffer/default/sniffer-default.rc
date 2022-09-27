@@ -3,4 +3,5 @@ service devtitans.sniffer-service    /vendor/bin/hw/devtitans.sniffer-service
         class hal
         user root
         group root
+        onrestart restart devtitans.sniffer-service
 
