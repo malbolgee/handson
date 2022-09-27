@@ -17,7 +17,7 @@ import android.util.Log;
 public class SnifferNetworkInfo {
     private static final String TAG = SnifferNetworkInfo.class.getSimpleName();
 
-    private int mRssi = 1;
+    private int mRssi = 0;
     private String mSsid;
 
     private SnifferNetworkInfo(Builder builder) {
@@ -53,8 +53,7 @@ public class SnifferNetworkInfo {
 
         SnifferNetworkInfo other = (SnifferNetworkInfo) o;
 
-        return Objects.equals(getSsid(), other.getSsid())
-                && Objects.equals(getRssi(), other.getRssi());
+        return getSsid().equals(other.getSsid());
     }
 
     /**
@@ -79,7 +78,7 @@ public class SnifferNetworkInfo {
      * </pre>
      */
     public static class Builder {
-        private int rssi = 1;
+        private int rssi = 0;
         private String ssid;
 
         public Builder() {
@@ -105,8 +104,10 @@ public class SnifferNetworkInfo {
         public SnifferNetworkInfo Build() {
             Log.d(TAG, "Building SnifferNetworkInfo");
 
-            if (TextUtils.isEmpty(this.ssid) || this.rssi > 0)
+            if (TextUtils.isEmpty(this.ssid) || this.rssi > 0) {
+                Log.d(TAG, "Build returning null");
                 return null;
+            }
 
             return new SnifferNetworkInfo(this);
         }
