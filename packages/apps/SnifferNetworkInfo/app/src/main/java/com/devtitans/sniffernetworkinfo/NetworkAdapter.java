@@ -43,7 +43,6 @@ public class NetworkAdapter extends RecyclerView.Adapter<NetworkAdapter.NetworkV
     public void onBindViewHolder(@NonNull NetworkViewHolder holder, int position) {
         var networkInfo = mNetworkNamesAndSignal.get(position);
 
-        holder.mNetworkName.setText(networkInfo.first);
         final int networkSignal = networkInfo.second;
         final int resourceId;
 
@@ -58,9 +57,8 @@ public class NetworkAdapter extends RecyclerView.Adapter<NetworkAdapter.NetworkV
         }
 
         holder.mNetworkSignal.setImageResource(resourceId);
-
-        holder.mNetworkName.setOnClickListener(v -> Toast.makeText(v.getContext(),
-                Integer.toString(networkSignal), Toast.LENGTH_SHORT).show());
+        holder.mNetworkName.setText(networkInfo.first);
+        holder.mNetworkValue.setText(Integer.toString(networkSignal));
     }
 
     @Override
@@ -72,12 +70,15 @@ public class NetworkAdapter extends RecyclerView.Adapter<NetworkAdapter.NetworkV
 
         private TextView mNetworkName;
         private ImageView mNetworkSignal;
+        private TextView mNetworkValue;
+
 
         public NetworkViewHolder(@NonNull View itemView) {
             super(itemView);
 
             mNetworkName = itemView.findViewById(R.id.network_ssid);
             mNetworkSignal = itemView.findViewById(R.id.network_rssi);
+            mNetworkValue = itemView.findViewById((R.id.rssid_value));
         }
     }
 
