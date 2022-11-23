@@ -1,6 +1,7 @@
 package com.devtitans.sniffernetworkinfo;
 
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.RemoteException;
 import android.util.Log;
 import android.util.Pair;
@@ -21,6 +22,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.TreeSet;
 
 public class MainActivity extends AppCompatActivity {
@@ -33,6 +36,8 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding mViewBinding;
     private NetworkAdapter mNetworkAdapter;
 
+    private List<SnifferNetworkInfo> networks;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -41,9 +46,36 @@ public class MainActivity extends AppCompatActivity {
         mSnifferManager = SnifferManager.getInstance();
         mNetworkAdapter = new NetworkAdapter(new ArrayList<>());
         mNetworkNamesAndSignalValues = new HashMap<>();
+        networks = new ArrayList<>();
+
         setList(new HashSet<>());
         initRecyclerView();
-        updateList();
+
+        Timer networkListTimer = new Timer ();
+        TimerTask networkListTask = new TimerTask () {
+            public void run() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateList();
+                    }
+                });
+            }
+        };
+        networkListTimer.scheduleAtFixedRate(networkListTask , 0l,  (10*1000));
+
+        Timer updateNetworkTimer = new Timer ();
+        TimerTask updateNetworkTask = new TimerTask () {
+            public void run() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        getNetworks();
+                    }
+                });
+            }
+        };
+        updateNetworkTimer.scheduleAtFixedRate(updateNetworkTask , 0l,  (2*1000));
     }
 
     private void initRecyclerView() {
@@ -61,52 +93,22 @@ public class MainActivity extends AppCompatActivity {
         return this.mNetworkNamesAndSignalMeans;
     }
 
+    private void getNetworks() {
+        SnifferNetworkInfo network = null;
+        try {
+            network = mSnifferManager.getNetworkInfo();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        networks.add(network);
+        keepValues(networks);
+    }
+
     public void updateList() {
-        var t = new Thread(() -> {
-            while (true) {
-                int tries = 10;
-                List<SnifferNetworkInfo> snil = new ArrayList<>();
-
-                while (tries >= 0) {
-                    SnifferNetworkInfo sni;
-                    try {
-                        sni = mSnifferManager.getNetworkInfo();
-
-                        if (sni == null) {
-                            --tries;
-                            continue;
-                        }
-
-                    } catch (RemoteException e) {
-                        e.printStackTrace();
-                        --tries;
-                        continue;
-                    }
-
-                    snil.add(sni);
-                    --tries;
-                }
-
-                keepValues(snil);
-                var ss = getNetworkSignalAverage();
-
-                runOnUiThread(() -> {
-                    setList(ss);
-                    mNetworkAdapter.setNetworkNamesAndSignal(new ArrayList<>(getList()));
-                    mNetworkAdapter.notifyDataSetChanged();
-                    Log.d(TAG, "Updating main UI");
-                });
-
-                try {
-                    Thread.sleep(10000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    break;
-                }
-            }
-        });
-
-        t.start();
+        var ss = getNetworkSignalAverage();
+        setList(ss);
+        mNetworkAdapter.setNetworkNamesAndSignal(new ArrayList<>(getList()));
+        mNetworkAdapter.notifyDataSetChanged();
     }
 
     private Set<Pair<String, Integer>> getNetworkSignalAverage() {
