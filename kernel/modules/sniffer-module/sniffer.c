@@ -8,11 +8,23 @@ MODULE_AUTHOR("Grupo-2 <devtitans@icomp.ufam.edu.br>");
 MODULE_DESCRIPTION("Driver de acesso ao Sniffer (ESP32 com Chip Serial CP2102");
 MODULE_LICENSE("GPL");
 
-#define MAX_RECV_LINE 100 /** The maximum length of the USB response.  */
+#define SSID_MAX_LENGTH 32
+#define BSSID_MAX_LENGTH 22
+
+const int8_t EOS = 127;
+
+typedef struct _network_info
+{
+    int8_t rssi;
+    char ssid[SSID_MAX_LENGTH + 2];
+    char bssid[BSSID_MAX_LENGTH + 2];
+} __attribute__((packed)) network_info_t;
+
+#define MAX_RECV_LINE 1000 /** The maximum length of the USB response.  */
 
 static int usb_probe(struct usb_interface *ifce, const struct usb_device_id *id);
 static void usb_disconnect(struct usb_interface *ifce);
-static char *usb_send_cmd(char *cmd);
+static void usb_send_cmd(char *cmd, char *buff);
 static ssize_t attr_show(struct kobject *sys_obj, struct kobj_attribute *attr, char *buff);
 
 static char recv_line[MAX_RECV_LINE];
@@ -66,6 +78,8 @@ static int usb_probe(struct usb_interface *interface, const struct usb_device_id
     usb_in_buffer = kmalloc(usb_max_size, GFP_KERNEL);
     usb_out_buffer = kmalloc(usb_max_size, GFP_KERNEL);
 
+    printk(KERN_INFO "Sniffer:  usb_max_size: %d...\n", usb_max_size);
+
     return 0;
 }
 
@@ -91,12 +105,13 @@ static void usb_disconnect(struct usb_interface *interface)
  *
  * @param cmd It's a string representing the command that is to be recognized and treated accordingly.
  */
-static char *usb_send_cmd(char *cmd)
+static void usb_send_cmd(char *cmd, char *buff)
 {
-    int recv_size = 0;
-    int ret, actual_size, i;
+    buff = NULL;
+    unsigned int recv_size = 0;
+    int ret, actual_size;
     int retries = 10;
-    char resp_expected[MAX_RECV_LINE];
+    // char resp_expected[MAX_RECV_LINE];
 
     printk(KERN_INFO "Sniffer: Sending command: %s\n", cmd);
 
@@ -104,12 +119,9 @@ static char *usb_send_cmd(char *cmd)
 
     ret = usb_bulk_msg(sniffer_device, usb_sndbulkpipe(sniffer_device, usb_out), usb_out_buffer, strlen(usb_out_buffer), &actual_size, 1000);
     if (ret)
-    {
         printk(KERN_ERR "Sniffer: Error on code %d trying to sending the command!\n", ret);
-        return NULL;
-    }
 
-    sprintf(resp_expected, "RES %s", cmd);
+    // sprintf(resp_expected, "RES %s", cmd);
 
     while (retries > 0)
     {
@@ -120,36 +132,57 @@ static char *usb_send_cmd(char *cmd)
             continue;
         }
 
-        for (i = 0; i < actual_size; ++i)
+        printk(KERN_ERR "Sniffer: actual data size: %d\n", actual_size);
+
+        for (int i = 0; i < actual_size; ++i)
         {
 
-            if (usb_in_buffer[i] == '\n')
+            printk(KERN_ERR "Sniffer: char: %d\n", usb_in_buffer[i]);
+
+            if (usb_in_buffer[i] == EOS)
             {
-                recv_line[recv_size] = '\0';
-                printk(KERN_INFO "Sniffer: A line received: '%s'\n", recv_line);
+                
+                
+                memset(buff, 0, recv_size);
+                memcpy(buff, recv_line, recv_size - 1);
 
-                if (!strncmp(recv_line, resp_expected, strlen(resp_expected)))
-                {
-                    printk(KERN_INFO "Sniffer: The line is the answer for %s! Processing ...\n", cmd);
-
-                    size_t size = strlen(resp_expected) + 1;
-                    size_t size_to_copy = strlen(&recv_line[size]);
-                    char *network_info = (char *)kmalloc(sizeof(char) * size_to_copy, GFP_KERNEL);
-                    memset(network_info, 0, sizeof(char) * size_to_copy);
-                    strncpy(network_info, &recv_line[size], size_to_copy);
-                    return network_info;
-                }
-                else
-                {
-                    printk(KERN_INFO "Sniffer: It is not the answer for %s! Attempt %d. Next line...\n", cmd, retries--);
-                    recv_size = 0;
-                }
+                // printk(KERN_ERR "Sniffer: networkinfo size: %zu recv_size %d\n", sizeof(network_info_t), recv_size - 1);
+                // printk(KERN_ERR "Sniffer: networkInfo: %d %s %s\n", network_info->rssi, network_info->ssid, network_info->bssid);
             }
             else
                 recv_line[recv_size++] = usb_in_buffer[i];
         }
+
+        // for (i = 0; i < actual_size; ++i)
+        // {
+
+        //     printk(KERN_ERR "Sniffer: char: %d\n", usb_in_buffer[i]);
+
+        // if (usb_in_buffer[i] == '\n')
+        // {
+        //     recv_line[recv_size] = '\0';
+        //     printk(KERN_INFO "Sniffer: A line received: '%s'\n", recv_line);
+
+        //     if (!strncmp(recv_line, resp_expected, strlen(resp_expected)))
+        //     {
+        //         printk(KERN_INFO "Sniffer: The line is the answer for %s! Processing ...\n", cmd);
+
+        //         size_t size = strlen(resp_expected) + 1;
+        //         size_t size_to_copy = strlen(&recv_line[size]);
+        //         char *network_info = (char *)kmalloc(sizeof(char) * size_to_copy, GFP_KERNEL);
+        //         memset(network_info, 0, sizeof(char) * size_to_copy);
+        //         strncpy(network_info, &recv_line[size], size_to_copy);
+        //         return network_info;
+        //     }
+        //     else
+        //     {
+        //         printk(KERN_INFO "Sniffer: It is not the answer for %s! Attempt %d. Next line...\n", cmd, retries--);
+        //         recv_size = 0;
+        //     }
+        // }
+        // else
+        //     recv_line[recv_size++] = usb_in_buffer[i];
     }
-    return NULL;
 }
 
 /**
@@ -163,21 +196,17 @@ static char *usb_send_cmd(char *cmd)
  */
 static ssize_t attr_show(struct kobject *sys_obj, struct kobj_attribute *attr, char *buff)
 {
-    char *network_info = NULL;
     const char *attr_name = attr->attr.name;
 
     printk(KERN_INFO "Sniffer: Reading %s ...\n", attr_name);
 
     if (!strcmp(attr_name, "network_info"))
-        network_info = usb_send_cmd("GET_NETWORK_INFO");
+        usb_send_cmd("GET_NETWORK_INFO", buff);
+    
+    printk(KERN_INFO "Sniffer: usb_send_cmd has finished");
 
-    if (network_info == NULL)
+    if (buff == NULL)
         sprintf(buff, "%s\n", "NULL");
-    else
-    {
-        sprintf(buff, "%s\n", network_info);
-        kfree(network_info);
-    }
 
-    return strlen(buff);
+    return 0;
 }
